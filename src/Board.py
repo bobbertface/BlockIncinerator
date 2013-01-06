@@ -13,7 +13,7 @@ class Board():
         self.board = zeros(size)
         self.frameCounter = 0
         self.blockSpeed = 1
-        self.frameCounterCeilingCoefficient = 60
+        self.frameCounterCeilingCoefficient = 20
         self.isAccelerated = False
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         self.blocks = []
@@ -35,9 +35,9 @@ class Board():
             if self.passDropTest():
                 # update tetramino position
                 tx, ty = self.tetramino.position
-                self.tetramino.position = (tx, ty+1)
+                self.tetramino.position = (tx, ty + 1)
                 # remove old positions in board
-                self._clearBlockPositions()
+                self._clearBlockPositions(self.tetramino.blocks)
                 # update position in board and on blocks
                 for block in self.tetramino.blocks:
                     x, oldY = block.position
@@ -45,16 +45,49 @@ class Board():
                     self.board[x, newY] = 1
                     block.changePosition((x, newY))
             else:
+                self.clearLines()
                 return self.addTetramino()
             self.frameCounter = 0
         else:
             self.frameCounter += 1
         return False
 
+    def clearLines(self):
+        # find any lines that we need to clear
+        clearedLineYValues = []
+        for i in range(self.y_size):
+            if sum(self.board[:, i]) == self.x_size:
+                clearedLineYValues.append(i)
+        
+        if len(clearedLineYValues) > 0:
+            ''' In-alteration combined with the speed of list comprehensions according to Alex Martelli's answer in
+                http://stackoverflow.com/questions/1207406/remove-items-from-a-list-while-iterating-in-python'''
+            
+            # remove old positions in board for all the blocks
+            self.board = zeros((self.x_size, self.y_size))
+            # delete the blocks for each removed line
+            self.blocks[:] = [block for block in self.blocks if block.position[1] not in clearedLineYValues]
+            
+            # move everything down by the number of lines that got removed below it
+            for block in self.blocks:
+                dropMovement = 0
+                for i in range(len(clearedLineYValues)):
+                    if block.position[1] < clearedLineYValues[i]:
+                        dropMovement = len(clearedLineYValues) - i
+                        break
+                if dropMovement > 0:
+                    x, y = block.position
+                    newY = y + dropMovement
+                    block.changePosition((x, newY))
+            # add the board positions back
+            for block in self.blocks:
+                x, y = block.position
+                self.board[x, y] = 1
+
     def rotateTetramino(self):
         if self.passRotateTest():
             # remove old positions in board
-            self._clearBlockPositions()
+            self._clearBlockPositions(self.tetramino.blocks)
             # rotate tetramino
             self.tetramino.rotate()
             # update position in board
@@ -68,7 +101,7 @@ class Board():
             tx, ty = self.tetramino.position
             self.tetramino.position = (tx - 1 if left else tx + 1, ty)
             # remove old positions on board
-            self._clearBlockPositions()
+            self._clearBlockPositions(self.tetramino.blocks)
             # update position in board an on blocks
             for block in self.tetramino.blocks:
                 oldX, y = block.position
@@ -76,7 +109,7 @@ class Board():
                 self.board[newX, y] = 1
                 block.changePosition((newX, y))
 
-    def _clearBlockPositions(self):
+    def _clearBlockPositions(self, blocks):
         for block in self.tetramino.blocks:
             x, oldY = block.position
             self.board[x, oldY] = 0

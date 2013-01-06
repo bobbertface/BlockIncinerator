@@ -45,6 +45,10 @@ def main():
             if event.type == QUIT:
                 mainLoopRun = False
         
+        # Quick exit for ESC key
+        if pygame.key.get_pressed()[pygame.K_ESCAPE]:
+            mainLoopRun = False
+        
         # Move things based on current state
         if not gameOver:
             keyHandler.handleKeys(pygame.key.get_pressed(), board)
