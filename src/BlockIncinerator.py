@@ -5,6 +5,7 @@ The basic structure is stolen from chimp.py in the examples folder for pygame
 @author: Bobbertface
 '''
 from Board import Board
+from KeyHandler import KeyHandler
 from pygame.locals import QUIT
 import pygame
 
@@ -27,12 +28,14 @@ def main():
     
 # Prepare game objects
     clock = pygame.time.Clock()
+    keyHandler = KeyHandler()
     board = Board((10, 20))
     board.addTetramino()
     cooldownCounter = 0
     cooldownMax = 30
     gameOver = False
     mainLoopRun = True
+
 # Main Loop
     while mainLoopRun:
         clock.tick(60)
@@ -44,6 +47,7 @@ def main():
         
         # Move things based on current state
         if not gameOver:
+            keyHandler.handleKeys(pygame.key.get_pressed(), board)
             gameOver = board.drop()
         
         # Close game if it ended after a period of time

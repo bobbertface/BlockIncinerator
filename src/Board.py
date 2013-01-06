@@ -13,7 +13,7 @@ class Board():
         self.board = zeros(size)
         self.frameCounter = 0
         self.blockSpeed = 1
-        self.frameCounterCeilingCoefficient = 1
+        self.frameCounterCeilingCoefficient = 15
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         self.blocks = []
     
@@ -31,11 +31,12 @@ class Board():
     def drop(self):
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         if self.frameCounter >= self.frameCounterCeiling:
-            if self.passDropTest(self.tetramino):
+            if self.passDropTest():
+                #update tetramino position
+                tx, ty = self.tetramino.position
+                self.tetramino.position = (tx, ty+1)
                 #remove old positions in board
-                for block in self.tetramino.blocks:
-                    x, oldY = block.position
-                    self.board[x, oldY] = 0
+                self._clearBlockPositions()
                 #update position in board and on block
                 for block in self.tetramino.blocks:
                     x, oldY = block.position
@@ -49,8 +50,24 @@ class Board():
             self.frameCounter += 1
         return False
 
+    def rotateTetramino(self):
+        if self.passRotateTest():
+            #remove old positions in board
+            self._clearBlockPositions()
+            #rotate tetramino
+            self.tetramino.rotate()
+            # update position in board
+            for block in self.tetramino.blocks:
+                x, y = block.position
+                self.board[x, y] = 1
+
+    def _clearBlockPositions(self):
+        for block in self.tetramino.blocks:
+            x, oldY = block.position
+            self.board[x, oldY] = 0
+
     '''Returns True if the piece can move down, False otherwise'''
-    def passDropTest(self, tetramino):
+    def passDropTest(self):
         # find lowest block per x coordinate
         checkBlocks = {}
         for block in self.tetramino.blocks:
@@ -71,6 +88,25 @@ class Board():
                 continue
         return True
 
+    '''Returns True if the active tetramino can rotate, False otherwise'''
+    def passRotateTest(self):
+        currentPositions = []
+        for block in self.tetramino.blocks:
+            currentPositions.append(block.position)
+        
+        newOrientation = self.tetramino.incrementOrientation()
+        newBlockArrangement = self.tetramino.blockArrangements[newOrientation]
+        newPositions = []
+        for unOffsetPosition in newBlockArrangement:
+            tx, ty = self.tetramino.position
+            x, y = unOffsetPosition
+            newPositions.append((tx + x, ty + y))
+        for newPosition in newPositions:
+            x, y = newPosition
+            if (self.board[x, y] and newPosition not in currentPositions):
+                return False
+        return True
+        
     '''Returns True if we couldn't add the block, False otherwise'''
     def addBlock(self, block):
         collide = False
