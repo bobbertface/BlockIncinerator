@@ -13,7 +13,8 @@ class Board():
         self.board = zeros(size)
         self.frameCounter = 0
         self.blockSpeed = 1
-        self.frameCounterCeilingCoefficient = 15
+        self.frameCounterCeilingCoefficient = 60
+        self.isAccelerated = False
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         self.blocks = []
     
@@ -32,12 +33,12 @@ class Board():
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         if self.frameCounter >= self.frameCounterCeiling:
             if self.passDropTest():
-                #update tetramino position
+                # update tetramino position
                 tx, ty = self.tetramino.position
                 self.tetramino.position = (tx, ty+1)
-                #remove old positions in board
+                # remove old positions in board
                 self._clearBlockPositions()
-                #update position in board and on block
+                # update position in board and on blocks
                 for block in self.tetramino.blocks:
                     x, oldY = block.position
                     newY = oldY + 1
@@ -52,14 +53,28 @@ class Board():
 
     def rotateTetramino(self):
         if self.passRotateTest():
-            #remove old positions in board
+            # remove old positions in board
             self._clearBlockPositions()
-            #rotate tetramino
+            # rotate tetramino
             self.tetramino.rotate()
             # update position in board
             for block in self.tetramino.blocks:
                 x, y = block.position
                 self.board[x, y] = 1
+
+    def moveTetramino(self, left):
+        if self.passMoveTest(left):
+            # update tetramino position
+            tx, ty = self.tetramino.position
+            self.tetramino.position = (tx - 1 if left else tx + 1, ty)
+            # remove old positions on board
+            self._clearBlockPositions()
+            # update position in board an on blocks
+            for block in self.tetramino.blocks:
+                oldX, y = block.position
+                newX = oldX - 1 if left else oldX + 1
+                self.board[newX, y] = 1
+                block.changePosition((newX, y))
 
     def _clearBlockPositions(self):
         for block in self.tetramino.blocks:
@@ -106,7 +121,28 @@ class Board():
             if (self.board[x, y] and newPosition not in currentPositions):
                 return False
         return True
-        
+    
+    def passMoveTest(self, left):
+        # find left or right most block per y coordinate
+        checkBlocks = {}
+        for block in self.tetramino.blocks:
+            x, y = block.position
+            if y in checkBlocks:
+                if x < checkBlocks[y].position[0] if left else x > checkBlocks[y].position[0]:
+                    checkBlocks[y] = block
+            if y not in checkBlocks:
+                checkBlocks[y] = block
+        # compare the left or right most blocks with the wall or other blocks on the board
+        for block in checkBlocks.values():
+            x, y = block.position
+            newX = x - 1 if left else x + 1
+            hitWall = newX < 0 if left else newX >= self.x_size
+            if hitWall or self.board[newX, y]:
+                return False
+            else:
+                continue
+        return True
+
     '''Returns True if we couldn't add the block, False otherwise'''
     def addBlock(self, block):
         collide = False
@@ -119,7 +155,7 @@ class Board():
 
     '''drop speed formula'''
     def calculateFrameCounterCeiling(self):
-        return self.frameCounterCeilingCoefficient / self.blockSpeed       
+        return 1 if self.isAccelerated else self.frameCounterCeilingCoefficient / self.blockSpeed       
 
     def draw(self, surface):
         for block in self.blocks:
