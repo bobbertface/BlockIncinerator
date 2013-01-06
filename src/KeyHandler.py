@@ -24,24 +24,24 @@ class KeyHandler:
         if not isUp:
             self.rotating = False
         
+        # Soft Drop
         if isDown:
             board.isAccelerated = True
         if not isDown:
             board.isAccelerated = False
         
+        # Move left
         if isLeft and not self.movingLeft:
             self.movingLeft = True
             board.moveTetramino(True)
         if not isLeft:
             self.movingLeft = False
         
+        # Move right
         if isRight and not self.movingRight:
             self.movingRight = True
             board.moveTetramino(False)
         if not isRight:
             self.movingRight = False
         
-        # Soft Drop
-        # Move left
-        # Move right
         # Hard Drop

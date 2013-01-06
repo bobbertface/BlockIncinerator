@@ -13,11 +13,18 @@ class Board():
         self.board = zeros(size)
         self.frameCounter = 0
         self.blockSpeed = 1
-        self.frameCounterCeilingCoefficient = 20
+        self.frameCounterCeilingCoefficient = 60
         self.isAccelerated = False
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         self.blocks = []
-    
+        self.baseScore = 50
+        self.scoreModifierForLine = [1, 3, 7, 12]
+        self.score = 0
+        self.lines = 0
+        self.currentLines = 0
+        self.linesForNextLevel = 9
+        self.maxBlockSpeed = 15
+        
     '''Returns True when the game is not over based on this tetramino, False otherwise'''
     def addTetramino(self):
         tetramino = Tetramino(Pieces.getRandomName(), self.initialPosition, self.blockSize)
@@ -62,7 +69,7 @@ class Board():
         if len(clearedLineYValues) > 0:
             ''' In-alteration combined with the speed of list comprehensions according to Alex Martelli's answer in
                 http://stackoverflow.com/questions/1207406/remove-items-from-a-list-while-iterating-in-python'''
-            
+            self.updateScore(len(clearedLineYValues))
             # remove old positions in board for all the blocks
             self.board = zeros((self.x_size, self.y_size))
             # delete the blocks for each removed line
@@ -83,6 +90,16 @@ class Board():
             for block in self.blocks:
                 x, y = block.position
                 self.board[x, y] = 1
+    
+    def updateScore(self, linesCleared):
+        self.lines += linesCleared
+        self.currentLines += linesCleared
+        if self.currentLines >= self.linesForNextLevel:
+            self.blockSpeed += 1
+            self.currentLines = self.currentLines - self.linesForNextLevel
+            self.linesForNextLevel += 1
+        lineBasedScore = (self.baseScore + (self.blockSpeed - 1) * 5) * self.scoreModifierForLine[linesCleared - 1]
+        self.score += lineBasedScore
 
     def rotateTetramino(self):
         if self.passRotateTest():
