@@ -19,4 +19,4 @@ class Block(pygame.sprite.Sprite):
     def changePosition(self, positionTuple):
         self.position = positionTuple
         x, y = positionTuple
-        self.rect.topleft = x * self.positionModifier, y * self.positionModifier
+        self.rect.topleft = x * self.positionModifier, (y-1) * self.positionModifier

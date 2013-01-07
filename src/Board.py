@@ -1,13 +1,12 @@
 '''
 @author: Bobbertface
 '''
-from numpy import zeros
-import Pieces
 from Tetramino import Tetramino
+from numpy import zeros
 
 class Board():
     def __init__(self, size):
-        self.initialPosition = 3, -1  # Initial position for tetraminos
+        self.initialPosition = 3, 0  # Initial position for tetraminos
         self.blockSize = 20  # used to translate between block coordinates and pixels
         self.x_size, self.y_size = size  # currently not used anywhere, consider removing
         self.board = zeros(size)
@@ -24,10 +23,10 @@ class Board():
         self.currentLines = 0
         self.linesForNextLevel = 9
         self.maxBlockSpeed = 15
-        
+
     '''Returns True when the game is not over based on this tetramino, False otherwise'''
-    def addTetramino(self):
-        tetramino = Tetramino(Pieces.getRandomName(), self.initialPosition, self.blockSize)
+    def addTetramino(self, name):
+        tetramino = Tetramino(name, self.initialPosition, self.blockSize)
         collide = False
         for block in tetramino.blocks:
             if self.addBlock(block):
@@ -40,20 +39,10 @@ class Board():
         self.frameCounterCeiling = self.calculateFrameCounterCeiling()
         if self.frameCounter >= self.frameCounterCeiling:
             if self.passDropTest():
-                # update tetramino position
-                tx, ty = self.tetramino.position
-                self.tetramino.position = (tx, ty + 1)
-                # remove old positions in board
-                self._clearBlockPositions(self.tetramino.blocks)
-                # update position in board and on blocks
-                for block in self.tetramino.blocks:
-                    x, oldY = block.position
-                    newY = oldY + 1
-                    self.board[x, newY] = 1
-                    block.changePosition((x, newY))
+                self.dropTetramino(1)
             else:
                 self.clearLines()
-                return self.addTetramino()
+                return True
             self.frameCounter = 0
         else:
             self.frameCounter += 1
@@ -65,7 +54,7 @@ class Board():
         for i in range(self.y_size):
             if sum(self.board[:, i]) == self.x_size:
                 clearedLineYValues.append(i)
-        
+
         if len(clearedLineYValues) > 0:
             ''' In-alteration combined with the speed of list comprehensions according to Alex Martelli's answer in
                 http://stackoverflow.com/questions/1207406/remove-items-from-a-list-while-iterating-in-python'''
@@ -74,7 +63,7 @@ class Board():
             self.board = zeros((self.x_size, self.y_size))
             # delete the blocks for each removed line
             self.blocks[:] = [block for block in self.blocks if block.position[1] not in clearedLineYValues]
-            
+
             # move everything down by the number of lines that got removed below it
             for block in self.blocks:
                 dropMovement = 0
@@ -90,7 +79,42 @@ class Board():
             for block in self.blocks:
                 x, y = block.position
                 self.board[x, y] = 1
-    
+
+    def hardDrop(self):
+        numLines = self.getHardDropLength()
+        self.dropTetramino(numLines)
+        self.clearLines()
+
+    def getHardDropLength(self):
+        # find lowest block per x coordinate
+        checkBlocks = self.getLowestBlocksPerXCoordinate()
+        # compare the lowest blocks with the board position 1 lower iteratively until we figure out how many lines we can drop the piece
+        candidateYValues = []
+        for block in checkBlocks.values():
+            x, y = block.position
+            numLines = 0
+            for checkY in range(y + 1, self.y_size):
+                hitBottom = checkY >= self.y_size
+                if not hitBottom and not self.board[x, checkY]:
+                    numLines = checkY - y
+                else:
+                    break;
+            candidateYValues.append(numLines)
+        return min(candidateYValues)
+
+    def dropTetramino(self, numLines):
+        # update tetramino position
+        tx, ty = self.tetramino.position
+        self.tetramino.position = (tx, ty + numLines)
+        # remove old positions in board
+        self._clearBlockPositions(self.tetramino.blocks)
+        # update position in board and on blocks
+        for block in self.tetramino.blocks:
+            x, oldY = block.position
+            newY = oldY + numLines
+            self.board[x, newY] = 1
+            block.changePosition((x, newY))
+
     def updateScore(self, linesCleared):
         self.lines += linesCleared
         self.currentLines += linesCleared
@@ -134,14 +158,7 @@ class Board():
     '''Returns True if the piece can move down, False otherwise'''
     def passDropTest(self):
         # find lowest block per x coordinate
-        checkBlocks = {}
-        for block in self.tetramino.blocks:
-            x, y = block.position
-            if x in checkBlocks:
-                if y > checkBlocks[x].position[1]:
-                    checkBlocks[x] = block
-            if x not in checkBlocks:
-                checkBlocks[x] = block
+        checkBlocks = self.getLowestBlocksPerXCoordinate()
         # compare the lowest blocks with the board position 1 lower
         for block in checkBlocks.values():
             x, y = block.position
@@ -153,12 +170,27 @@ class Board():
                 continue
         return True
 
+    def getLowestBlocksPerXCoordinate(self):
+        checkBlocks = {}
+        for block in self.tetramino.blocks:
+            x, y = block.position
+            if x in checkBlocks:
+                if y > checkBlocks[x].position[1]:
+                    checkBlocks[x] = block
+            if x not in checkBlocks:
+                checkBlocks[x] = block
+        return checkBlocks
+
     '''Returns True if the active tetramino can rotate, False otherwise'''
     def passRotateTest(self):
         currentPositions = []
         for block in self.tetramino.blocks:
+            x, y = block.position
+            if not self.board[x, y]:
+                # This tetramino got rotated when some of its blocks have been removed
+                return False
             currentPositions.append(block.position)
-        
+
         newOrientation = self.tetramino.incrementOrientation()
         newBlockArrangement = self.tetramino.blockArrangements[newOrientation]
         newPositions = []
@@ -168,15 +200,21 @@ class Board():
             newPositions.append((tx + x, ty + y))
         for newPosition in newPositions:
             x, y = newPosition
-            if (self.board[x, y] and newPosition not in currentPositions):
+            xInBounds = x < self.x_size and x >= 0
+            yInBounds = y < self.y_size and y >= 0
+            inBounds = xInBounds and yInBounds
+            if not inBounds or (self.board[x, y] and newPosition not in currentPositions):
                 return False
         return True
-    
+
     def passMoveTest(self, left):
         # find left or right most block per y coordinate
         checkBlocks = {}
         for block in self.tetramino.blocks:
             x, y = block.position
+            if not self.board[x, y]:
+                # This tetramino got moved when some of its blocks have been removed
+                return False
             if y in checkBlocks:
                 if x < checkBlocks[y].position[0] if left else x > checkBlocks[y].position[0]:
                     checkBlocks[y] = block
@@ -205,7 +243,7 @@ class Board():
 
     '''drop speed formula'''
     def calculateFrameCounterCeiling(self):
-        return 1 if self.isAccelerated else self.frameCounterCeilingCoefficient / self.blockSpeed       
+        return 1 if self.isAccelerated else self.frameCounterCeilingCoefficient / self.blockSpeed
 
     def draw(self, surface):
         for block in self.blocks:

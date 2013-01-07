@@ -11,7 +11,7 @@ class Tetramino():
         self.name = Pieces.nameCheck(name)
         self.blocks = Pieces.getBlocks(self.name, initialPosition, self.positionModifier)
         self.blockArrangements = Pieces.positionDictionary.get(self.name)
-    
+
     '''pass the surface down to the blocks'''
     def draw(self, surface):
         for block in self.blocks:
@@ -23,7 +23,7 @@ class Tetramino():
         for i in range(len(self.blockArrangements[self.orientation])):
             x, y = self.blockArrangements[self.orientation][i]
             self.blocks[i].changePosition((tx + x, ty + y))
-    
+
     def incrementOrientation(self):
         orientation = self.orientation + 1
         if (orientation >= len(self.blockArrangements)):
