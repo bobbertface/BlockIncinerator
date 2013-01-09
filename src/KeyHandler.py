@@ -9,6 +9,14 @@ class KeyHandler:
         self.rotating = False
         self.movingLeft = False
         self.movingRight = False
+        self.moveLeftCounter = 0
+        self.moveLeftCounterMax = 1
+        self.moveRightCounter = 0
+        self.moveRightCounterMax = 1
+        self.moveLeftDelayCounter = 0
+        self.moveRightDelayCounter = 0
+        self.continuousMovementDelay = 15
+
 
     def handleKeys(self, keys, board):
         isUp = keys[pygame.K_UP]  # rotate
@@ -30,15 +38,37 @@ class KeyHandler:
             board.isAccelerated = False
 
         # Move left
-        if isLeft and not self.movingLeft:
-            self.movingLeft = True
-            board.moveTetramino(True)
+        if isLeft:
+            if self.movingLeft:
+                if self.moveLeftDelayCounter >= self.continuousMovementDelay:
+                    if self.moveLeftCounter >= self.moveLeftCounterMax:
+                        board.moveTetramino(True)
+                        self.moveLeftCounter = 0
+                    else:
+                        self.moveLeftCounter += 1
+                else:
+                    self.moveLeftDelayCounter += 1
+            else:
+                self.movingLeft = True
+                board.moveTetramino(True)
         if not isLeft:
             self.movingLeft = False
+            self.moveLeftDelayCounter = 0
 
         # Move right
-        if isRight and not self.movingRight:
-            self.movingRight = True
-            board.moveTetramino(False)
+        if isRight:
+            if self.movingRight:
+                if self.moveRightDelayCounter >= self.continuousMovementDelay:
+                    if self.moveRightCounter >= self.moveLeftCounterMax:
+                        board.moveTetramino(False)
+                        self.moveRightCounter = 0
+                    else:
+                        self.moveRightCounter += 1
+                else:
+                    self.moveRightDelayCounter += 1
+            else:
+                self.movingRight = True
+                board.moveTetramino(False)
         if not isRight:
             self.movingRight = False
+            self.moveRightDelayCounter = 0

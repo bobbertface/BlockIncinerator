@@ -8,7 +8,7 @@ class Board():
     def __init__(self, size):
         self.initialPosition = 3, 0  # Initial position for tetraminos
         self.blockSize = 20  # used to translate between block coordinates and pixels
-        self.x_size, self.y_size = size  # currently not used anywhere, consider removing
+        self.x_size, self.y_size = size
         self.board = zeros(size)
         self.frameCounter = 0
         self.blockSpeed = 1
