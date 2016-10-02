@@ -17,7 +17,7 @@ Destroy all the Blocks!
 2. From cmd prompt:
 
 	python.exe -m pip install PyInstaller  
-	cd <location of BlockIncinerator>/src  
+	cd \<location of BlockIncinerator directory\>/src  
 	python.exe -m PyInstaller BlockIncinerator.spec  
 
 3. If all goes well, it will create src/dist/BlockIncinerator.exe and you can launch it on other Windows machines without Python or the other listed dependencies installed.
