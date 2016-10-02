@@ -10,6 +10,8 @@ from pygame.locals import QUIT
 import pygame
 from Tetramino import Tetramino
 import Pieces
+import os
+import sys
 
 def main():
     '''
@@ -178,6 +180,10 @@ def main():
         if pygame.key.get_pressed()[pygame.K_ESCAPE]:
             exitProgram = True
     pygame.quit()
+
+# For EXE packaging
+if getattr(sys, 'frozen', False):
+    os.chdir(getattr(sys, '_MEIPASS', os.getcwd()))
 
 # this calls the 'main' function when this script is executed
 if __name__ == '__main__':
